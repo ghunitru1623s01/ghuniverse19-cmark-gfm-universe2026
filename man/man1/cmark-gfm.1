@@ -6,6 +6,7 @@
 .HP 6n
 \fBcmark-gfm\fR
 [options]
+[\-\-]
 file*
 .SH "DESCRIPTION"
 \fBcmark-gfm\fR
@@ -15,6 +16,9 @@ described in the CommonMark spec.  It reads input from \fIstdin\fR
 or the specified files (concatenating their contents) and writes
 output to \fIstdout\fR.
 .SH "OPTIONS"
+.TP 12n
+.B \-\-
+Treat all remaining arguments as file names, even if they begin with a dash.
 .TP 12n
 .B \-\-to, \-t \f[I]FORMAT\f[]
 Specify output format (\f[C]html\f[], \f[C]man\f[], \f[C]xml\f[],

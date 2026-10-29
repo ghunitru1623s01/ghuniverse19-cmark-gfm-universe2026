@@ -919,6 +919,26 @@ static void test_safe(test_batch_runner *runner) {
   free(html);
 }
 
+static void liberal_html_tags(test_batch_runner *runner) {
+  static const struct {
+    const char *markdown;
+    const char *html;
+  } cases[] = {
+    {"a<\n<b>ok</b>", "<p>a&lt;\n<b>ok</b></p>\n"},
+    {"a<<\n<@>ok", "<p>a&lt;&lt;\n<@>ok</p>\n"},
+    {"a<`x\ny`<@>ok", "<p>a&lt;<code>x y</code><@>ok</p>\n"},
+    {"a<\r\n<@>ok", "<p>a&lt;\n<@>ok</p>\n"},
+    {"a<<*ok*", "<p>a&lt;&lt;<em>ok</em></p>\n"}
+  };
+  for (size_t index = 0; index < sizeof(cases) / sizeof(cases[0]); ++index) {
+    char *html = cmark_markdown_to_html(cases[index].markdown,
+        strlen(cases[index].markdown),
+        CMARK_OPT_LIBERAL_HTML_TAG | CMARK_OPT_UNSAFE);
+    STR_EQ(runner, html, cases[index].html, "line-scoped liberal HTML scan");
+    free(html);
+  }
+}
+
 static void test_md_to_html(test_batch_runner *runner, const char *markdown,
                             const char *expected_html, const char *msg) {
   char *html = cmark_markdown_to_html(markdown, strlen(markdown),
@@ -959,6 +979,20 @@ static int _timing;
 #endif
 
 static void test_pathological_regressions(test_batch_runner *runner) {
+  {
+    size_t length = 131072;
+    char *input = (char *)malloc(length);
+    memset(input, '<', length);
+    START_TIMING();
+    char *html = cmark_markdown_to_html(input, length, CMARK_OPT_LIBERAL_HTML_TAG);
+    END_TIMING();
+    INT_EQ(runner, strlen(html), 4 * length + 8,
+           "unclosed liberal HTML is escaped without dropping text");
+    free(html);
+    free(input);
+    OK(runner, TIMING < 1000, "failed liberal HTML scans take less than 1000ms");
+  }
+
   {
     // I don't care what the output is, so long as it doesn't take too long.
     char path[] = "[a](b";
@@ -1155,6 +1189,7 @@ int main() {
   numeric_entities(runner);
   test_cplusplus(runner);
   test_safe(runner);
+  liberal_html_tags(runner);
   test_feed_across_line_ending(runner);
   test_pathological_regressions(runner);
   source_pos(runner);

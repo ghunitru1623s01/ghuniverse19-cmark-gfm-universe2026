@@ -26,6 +26,11 @@ endif(WIN32)
 
 IF (PYTHONINTERP_FOUND)
 
+  add_test(cli_tests
+    ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/cli_tests.py"
+    "${CMAKE_CURRENT_BINARY_DIR}/../src/cmark-gfm"
+    )
+
   add_test(html_normalization
     ${PYTHON_EXECUTABLE} "-m" "doctest"
     "${CMAKE_CURRENT_SOURCE_DIR}/normalize.py"

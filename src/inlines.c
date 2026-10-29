@@ -55,6 +55,7 @@ typedef struct subject{
   unsigned flags;
   int line;
   bufsize_t pos;
+  bufsize_t liberal_html_tag_skip_end;
   int block_offset;
   int column_offset;
   cmark_map *refmap;
@@ -190,6 +191,7 @@ static void subject_from_buf(cmark_mem *mem, int line_number, int block_offset, 
   e->flags = 0;
   e->line = line_number;
   e->pos = 0;
+  e->liberal_html_tag_skip_end = 0;
   e->block_offset = block_offset;
   e->column_offset = 0;
   e->refmap = refmap;
@@ -1000,7 +1002,8 @@ static cmark_node *handle_pointy_brace(subject *subj, int options) {
     return node;
   }
 
-  if (options & CMARK_OPT_LIBERAL_HTML_TAG) {
+  if ((options & CMARK_OPT_LIBERAL_HTML_TAG) &&
+      subj->pos >= subj->liberal_html_tag_skip_end) {
     matchlen = scan_liberal_html_tag(&subj->input, subj->pos);
     if (matchlen > 0) {
       contents = cmark_chunk_dup(&subj->input, subj->pos - 1, matchlen + 1);
@@ -1009,6 +1012,10 @@ static cmark_node *handle_pointy_brace(subject *subj, int options) {
       adjust_subj_node_newlines(subj, node, matchlen, 1, options);
       return node;
     }
+    const unsigned char *line_end = memchr(subj->input.data + subj->pos, '\n',
+                                         subj->input.len - subj->pos);
+    subj->liberal_html_tag_skip_end = line_end
+        ? (bufsize_t)(line_end - subj->input.data) : subj->input.len;
   }
 
   // if nothing matches, just return the opening <:

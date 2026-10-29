@@ -44,7 +44,7 @@ typedef enum {
 } writer_format;
 
 void print_usage() {
-  printf("Usage:   cmark-gfm [FILE*]\n");
+  printf("Usage:   cmark-gfm [OPTION*] [--] [FILE*]\n");
   printf("Options:\n");
   printf("  --to, -t FORMAT   Specify output format (html, xml, man, "
          "commonmark, plaintext, latex)\n");
@@ -66,6 +66,7 @@ void print_usage() {
          "                                  string in a separate attribute.\n");
   printf("  --help, -h       Print usage information\n");
   printf("  --version        Print version\n");
+  printf("  --               Treat remaining arguments as file names\n");
 }
 
 static bool print_document(cmark_node *document, writer_format writer,
@@ -131,6 +132,7 @@ int main(int argc, char *argv[]) {
   writer_format writer = FORMAT_HTML;
   int options = CMARK_OPT_DEFAULT;
   int res = 1;
+  bool options_done = false;
 
 #ifdef USE_PLEDGE
   if (pledge("stdio rpath", NULL) != 0) {
@@ -156,7 +158,11 @@ int main(int argc, char *argv[]) {
   files = (int *)calloc(argc, sizeof(*files));
 
   for (i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "--version") == 0) {
+    if (options_done) {
+      files[numfps++] = i;
+    } else if (strcmp(argv[i], "--") == 0) {
+      options_done = true;
+    } else if (strcmp(argv[i], "--version") == 0) {
       printf("cmark-gfm %s", CMARK_GFM_VERSION_STRING);
       printf(" - CommonMark with GitHub Flavored Markdown converter\n(C) 2014-2016 John MacFarlane\n");
       goto success;
@@ -247,7 +253,9 @@ int main(int argc, char *argv[]) {
 #endif
 
   for (i = 1; i < argc; i++) {
-    if ((strcmp(argv[i], "-e") == 0) || (strcmp(argv[i], "--extension") == 0)) {
+    if (strcmp(argv[i], "--") == 0) {
+      break;
+    } else if ((strcmp(argv[i], "-e") == 0) || (strcmp(argv[i], "--extension") == 0)) {
       i += 1;
       if (i < argc) {
         if (strcmp(argv[i], "footnotes") == 0) {
